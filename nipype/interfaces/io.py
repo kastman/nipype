@@ -363,6 +363,10 @@ class DataGrabberInputSpec(DynamicTraitedSpec, BaseInterfaceInputSpec):  # Inter
     template_args = traits.Dict(key_trait=traits.Str,
                                 value_trait=traits.List(traits.List),
                                 desc='Information to plug into template')
+    ignore_regexes = traits.List(desc=("List of regular expressions, "
+                                 "if any match the path it will be "
+                                 "ignored.")
+                                )
 
 
 class DataGrabber(IOBase):
@@ -478,6 +482,14 @@ class DataGrabber(IOBase):
                         (self.__class__.__name__, key)
                     raise ValueError(msg)
 
+        # Set Compile real regex objects from input regex strings.
+        if self.inputs.ignore_regexes is Undefined:
+            self.ignore_regexes = []
+        else:
+            self.ignore_regexes = \
+                [re.compile(regex) 
+                 for regex in self.inputs.ignore_regexes]
+
         outputs = {}
         for key, args in self.inputs.template_args.items():
             outputs[key] = []
@@ -531,6 +543,13 @@ class DataGrabber(IOBase):
                         except TypeError as e:
                             raise TypeError(e.message + ": Template %s failed to convert with args %s"%(template, str(tuple(argtuple))))
                     outfiles = glob.glob(filledtemplate)
+                    
+                    # Remove Outfiles matching any ignore regexes
+                    for ignore_regex in self.ignore_regexes:
+                        for outfile in outfiles:
+                            if ignore_regex.search(outfile):
+                                outfiles.remove(outfile)
+
                     if len(outfiles) == 0:
                         msg = 'Output key: %s Template: %s returned no files' % (key, filledtemplate)
                         if self.inputs.raise_on_empty:
