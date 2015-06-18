@@ -9,6 +9,8 @@ def test_ThresholdStatistics_inputs():
     ),
     height_threshold=dict(mandatory=True,
     ),
+    corrected_threshold=dict(usedefault=True
+    ),
     ignore_exception=dict(nohash=True,
     usedefault=True,
     ),
@@ -40,6 +42,8 @@ def test_ThresholdStatistics_outputs():
     voxelwise_P_FDR=dict(),
     voxelwise_P_RF=dict(),
     voxelwise_P_uncor=dict(),
+    clusterwise_K_RF=dict(),
+    clusterwise_K_FDR=dict()
     )
     outputs = ThresholdStatistics.output_spec()
 

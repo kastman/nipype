@@ -582,15 +582,20 @@ class ThresholdStatisticsInputSpec(SPMCommandInputSpec):
     contrast_index = traits.Int(mandatory=True, desc='which contrast in the SPM.mat to use')
     height_threshold = traits.Float(desc="stat value for initial thresholding (defining clusters)", mandatory=True)
     extent_threshold = traits.Int(0, usedefault=True, desc="Minimum cluster size in voxels")
-
+    corrected_threshold = traits.Float(0.05, usedefault=True, desc="stat value for finding uncorrected threshold")
+    # use_topo_fdr = traits.Bool(True, usedefault=True, desc="whether to use FDR over cluster extent probabilities")
+    
 
 class ThresholdStatisticsOutputSpec(TraitedSpec):
     voxelwise_P_Bonf = traits.Float()
     voxelwise_P_RF = traits.Float()
     voxelwise_P_uncor = traits.Float()
     voxelwise_P_FDR = traits.Float()
+    voxelwise_P_RF_Thresh = traits.Float()
     clusterwise_P_RF = traits.Float()
     clusterwise_P_FDR = traits.Float()
+    clusterwise_K_RF = traits.Float()
+    clusterwise_K_FDR = traits.Float()
 
 
 class ThresholdStatistics(SPMCommand):
@@ -615,6 +620,11 @@ class ThresholdStatistics(SPMCommand):
         script += "cluster_forming_thr = %f;\n" % self.inputs.height_threshold
         script += "stat_filename = '%s';\n" % self.inputs.stat_image
         script += "extent_threshold = %d;\n" % self.inputs.extent_threshold
+        script += "corrected_threshold = %f;\n" % self.inputs.corrected_threshold
+        # if self.inputs.use_topo_fdr:
+        #     script += "use_topo_fdr  = 1;\n"
+        # else:
+        #     script += "use_topo_fdr  = 0;\n"
         script += "load '%s'\n" % self.inputs.spm_mat_file
         script += """
 FWHM  = SPM.xVol.FWHM;
@@ -623,6 +633,8 @@ STAT = SPM.xCon(con_index).STAT;
 R = SPM.xVol.R;
 S = SPM.xVol.S;
 n = 1;
+
+format('long');
 
 voxelwise_P_Bonf = spm_P_Bonf(cluster_forming_thr,df,STAT,S,n)
 voxelwise_P_RF = spm_P_RF(1,0,cluster_forming_thr,df,STAT,R,n)
@@ -658,9 +670,14 @@ clusterwise_P_RF = spm_P_RF(1,extent_threshold*V2R,cluster_forming_thr,df,STAT,R
 [x,y,z] = ind2sub(size(stat_map_data),(1:numel(stat_map_data))');
 XYZ = cat(1, x', y', z');
 
-[u, CPs, ue] = spm_uc_clusterFDR(0.05,df,STAT,R,n,Z,XYZ,V2R,cluster_forming_thr);
+[u, CPs, ue] = spm_uc_clusterFDR(corrected_threshold,df,STAT,R,n,Z,XYZ,V2R,cluster_forming_thr);
 
 clusterwise_P_FDR = spm_P_clusterFDR(extent_threshold*V2R,df,STAT,R,n,cluster_forming_thr,CPs')
+clusterwise_K_RF = ue
+clusterwise_K_FDR = u
+
+voxelwise_P_RF_Thresh = spm_uc_RF(corrected_threshold,df,STAT,R,n)
+% voxelwise_P_RF_Thresh = spm_uc_peakFDR(corrected_threshold,df,STAT,R,n,Z,XYZ,cluster_forming_thr)
 """
         return script
 
@@ -672,8 +689,8 @@ clusterwise_P_FDR = spm_P_clusterFDR(extent_threshold*V2R,df,STAT,R,n,cluster_fo
                 setattr(outputs, cur_output, float(line))
                 cur_output = ""
                 continue
-            if len(line.split()) != 0 and line.split()[0] in ["clusterwise_P_FDR", "clusterwise_P_RF", "voxelwise_P_Bonf", "voxelwise_P_FDR",
-                                   "voxelwise_P_RF", "voxelwise_P_uncor"]:
+            if len(line.split()) != 0 and line.split()[0] in ["clusterwise_P_FDR", "clusterwise_P_RF", "clusterwise_K_RF", "clusterwise_K_FDR",
+                                   "voxelwise_P_Bonf", "voxelwise_P_FDR", "voxelwise_P_RF", "voxelwise_P_uncor", "voxelwise_P_RF_Thresh"]:
                 cur_output = line.split()[0]
                 continue
 
