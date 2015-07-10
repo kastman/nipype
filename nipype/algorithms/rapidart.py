@@ -22,7 +22,7 @@ import os
 from copy import deepcopy
 from warnings import warn
 
-from nibabel import load, funcs, Nifti1Image
+from nibabel import load, funcs, Nifti1Image, Nifti1Pair
 import numpy as np
 from scipy import signal
 import scipy.io as sio
@@ -424,7 +424,11 @@ class ArtifactDetect(BaseInterface):
 
         (artifactfile, intensityfile, statsfile, normfile, plotfile,
          displacementfile, maskfile) = self._get_output_filenames(imgfile, cwd)
-        mask_img = Nifti1Image(mask.astype(np.uint8), affine)
+        if maskfile.endswith('.nii') or maskfile.endswith('.nii.gz'):
+            Nifti1Klass = Nifti1Image
+        else:
+            Nifti1Klass = Nifti1Pair
+        mask_img = Nifti1Klass(mask.astype(np.uint8), affine)
         mask_img.to_filename(maskfile)
 
         if self.inputs.use_norm:
