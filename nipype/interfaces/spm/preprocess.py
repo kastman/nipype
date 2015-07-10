@@ -325,9 +325,10 @@ class Coregister(SPMCommand):
         """
         if opt == 'target' or (opt == 'source' and self.inputs.jobtype != "write"):
             return scans_for_fnames(filename_to_list(val),
-                                    keep4d=True)
+                                    keep4d=False)
         if opt == 'apply_to_files':
-            return np.array(filename_to_list(val), dtype=object)
+            return np.array(scans_for_fnames(filename_to_list(val),
+                                             keep4d=False), dtype=object)
         if opt == 'source' and self.inputs.jobtype == "write":
             if isdefined(self.inputs.apply_to_files):
                 return scans_for_fnames(val+self.inputs.apply_to_files)
