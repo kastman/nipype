@@ -21,11 +21,11 @@ except:
 mlab.MatlabCommand.set_default_matlab_cmd(matlab_cmd)
 
 
-def create_files_in_directory():
+def create_files_in_directory(imgext='nii'):
     outdir = mkdtemp()
     cwd = os.getcwd()
     os.chdir(outdir)
-    filelist = ['a.nii','b.nii']
+    filelist = ['a.' + imgext, 'b.' + imgext]
     for f in filelist:
         hdr = nb.Nifti1Header()
         shape = (3,3,3,4)
@@ -45,7 +45,7 @@ def test_slicetiming():
     yield assert_equal, spm.SliceTiming._jobname, 'st'
 
 def test_slicetiming_list_outputs():
-    filelist, outdir, cwd = create_files_in_directory()
+    filelist, outdir, cwd = create_files_in_directory('img')
     st = spm.SliceTiming(in_files=filelist[0])
     yield assert_equal, st._list_outputs()['timecorrected_files'][0][0], 'a'
     clean_directory(outdir, cwd)
